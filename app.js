@@ -1,4 +1,4 @@
-const contractAddress = "DIRECCION_DEL_CONTRATO"; // Reemplaza con la dirección real del contrato
+const contractAddress = "0x988527647cDC2A710C8a7570b39E06ed3Cb89a9C"; 
 const abiUrl = "https://raw.githubusercontent.com/SorosLabsdevs/Smartcontract-telcolicitacion/main/abi.json";
 const web3 = new Web3("https://skynet.soroschain.com/"); // Reemplaza con tu RPC
 
