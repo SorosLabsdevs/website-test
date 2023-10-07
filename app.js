@@ -1,90 +1,93 @@
-// Importando la biblioteca web3
-import Web3 from 'web3';
+const contractAddress = "DIRECCION_DEL_CONTRATO"; // Reemplaza con la dirección real del contrato
+const abiUrl = "https://raw.githubusercontent.com/SorosLabsdevs/Smartcontract-telcolicitacion/main/abi.json";
+const web3 = new Web3("https://skynet.soroschain.com/"); // Reemplaza con tu RPC
 
-// URL del ABI del contrato
-const abiUrl = 'https://raw.githubusercontent.com/SorosLabsdevs/Smartcontract-telcolicitacion/main/abi.json';
-
-// Dirección del contrato
-const contractAddress = '0x988527647cDC2A710C8a7570b39E06ed3Cb89a9C';
-
-// Creando una instancia de web3 y configurando el provider
-let web3 = new Web3(new Web3.providers.HttpProvider('https://skynet.soroschain.com/'));
-
-// Creando una variable para almacenar el contrato
 let contract;
+let accounts;
 
-// Función para cargar el ABI y configurar el contrato
-async function setupContract() {
+async function init() {
     try {
-        // Obteniendo el ABI del contrato desde la URL
         const response = await fetch(abiUrl);
         const abi = await response.json();
 
-        // Configurando el contrato
         contract = new web3.eth.Contract(abi, contractAddress);
+
+        accounts = await web3.eth.getAccounts();
+        updateContractInfo();
     } catch (error) {
-        console.error("Error setting up the contract: ", error);
+        console.error("Error al inicializar:", error);
     }
 }
 
-// Función para registrar una empresa
-async function registrarEmpresa(nombre) {
+async function updateContractInfo() {
     try {
-        // Obteniendo la cuenta actualmente seleccionada en Metamask
-        const accounts = await web3.eth.getAccounts();
-        const account = accounts[0];
+        const categoriaActual = await contract.methods.categoriaActual().call();
+        const tipoFrecuenciaActual = await contract.methods.tipoFrecuenciaActual().call();
+        const montoMinimoPuja = await contract.methods.montoMinimoPuja().call();
+        const duracionRonda = await contract.methods.duracionRonda().call();
+        const fechaFinRonda = await contract.methods.fechaFinRonda().call();
 
-        // Llamando a la función registrarEmpresa del contrato
-        await contract.methods.registrarEmpresa(nombre).send({ from: account });
+        document.getElementById("contractAddress").textContent = contractAddress;
+        document.getElementById("categoriaActual").textContent = categoriaActual;
+        document.getElementById("tipoFrecuenciaActual").textContent = tipoFrecuenciaActual;
+        document.getElementById("montoMinimoPuja").textContent = montoMinimoPuja;
+        document.getElementById("duracionRonda").textContent = duracionRonda;
+        document.getElementById("fechaFinRonda").textContent = new Date(fechaFinRonda * 1000).toLocaleString();
     } catch (error) {
-        console.error("Error registering the company: ", error);
+        console.error("Error al actualizar la información del contrato:", error);
     }
 }
 
-// Función para hacer una oferta
-async function hacerOferta(monto) {
-    try {
-        // Obteniendo la cuenta actualmente seleccionada en Metamask
-        const accounts = await web3.eth.getAccounts();
-        const account = accounts[0];
+document.addEventListener("DOMContentLoaded", () => {
+    init();
 
-        // Llamando a la función hacerOferta del contrato
-        await contract.methods.hacerOferta(monto).send({ from: account });
-    } catch (error) {
-        console.error("Error making a bid: ", error);
-    }
-}
+    document.getElementById("registrarEmpresaButton").addEventListener("click", async () => {
+        try {
+            const nombreEmpresa = prompt("Ingrese el nombre de la empresa");
+            if (nombreEmpresa) {
+                await contract.methods.registrarEmpresa(nombreEmpresa).send({ from: accounts[0] });
+                updateContractInfo();
+                alert("Empresa registrada con éxito");
+            }
+        } catch (error) {
+            console.error("Error al registrar la empresa:", error);
+        }
+    });
 
-// Función para cerrar la ronda actual
-async function cerrarRonda() {
-    try {
-        // Obteniendo la cuenta actualmente seleccionada en Metamask
-        const accounts = await web3.eth.getAccounts();
-        const account = accounts[0];
+    document.getElementById("hacerOfertaButton").addEventListener("click", async () => {
+        try {
+            const montoOferta = prompt("Ingrese el monto de la oferta");
+            if (montoOferta) {
+                await contract.methods.hacerOferta(web3.utils.toWei(montoOferta, "ether")).send({ from: accounts[0] });
+                updateContractInfo();
+                alert("Oferta realizada con éxito");
+            }
+        } catch (error) {
+            console.error("Error al hacer la oferta:", error);
+        }
+    });
 
-        // Llamando a la función cerrarRonda del contrato
-        await contract.methods.cerrarRonda().send({ from: account });
-    } catch (error) {
-        console.error("Error closing the round: ", error);
-    }
-}
+    document.getElementById("cerrarRondaButton").addEventListener("click", async () => {
+        try {
+            await contract.methods.cerrarRonda().send({ from: accounts[0] });
+            updateContractInfo();
+            alert("Ronda cerrada con éxito");
+        } catch (error) {
+            console.error("Error al cerrar la ronda:", error);
+        }
+    });
 
-// Función para emitir una penalización
-async function emitirPenalizacion(idRonda, razon) {
-    try {
-        // Obteniendo la cuenta actualmente seleccionada en Metamask
-        const accounts = await web3.eth.getAccounts();
-        const account = accounts[0];
-
-        // Llamando a la función emitirPenalizacion del contrato
-        await contract.methods.emitirPenalizacion(idRonda, razon).send({ from: account });
-    } catch (error) {
-        console.error("Error issuing a penalty: ", error);
-    }
-}
-
-// Inicializando el contrato cuando se carga la página
-window.onload = setupContract;
-
-// Exportando las funciones para que puedan ser utilizadas en otros archivos
-export { registrarEmpresa, hacerOferta, cerrarRonda, emitirPenalizacion };
+    document.getElementById("emitirPenalizacionButton").addEventListener("click", async () => {
+        try {
+            const idRonda = prompt("Ingrese el ID de la ronda a penalizar");
+            const razon = prompt("Ingrese la razón de la penalización");
+            if (idRonda && razon) {
+                await contract.methods.emitirPenalizacion(idRonda, razon).send({ from: accounts[0] });
+                updateContractInfo();
+                alert("Penalización emitida con éxito");
+            }
+        } catch (error) {
+            console.error("Error al emitir la penalización:", error);
+        }
+    });
+});
